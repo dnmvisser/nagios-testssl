@@ -26,12 +26,12 @@ try:
     parser = argparse.ArgumentParser(description='Check output of testssl.sh')
     parser.add_argument('--uri', help='host|host:port|URL|URL:port.'
             'Port 443 is default, URL can only contain HTTPS protocol', required=True)
-    parser.add_argument('--testssl', help='testssl command or path. '
-            'Defaults to "testssl"', default='testssl')
+    parser.add_argument('--testssl', help='Path to the testssl.sh script', required=True)
     parser.add_argument('--critical', help='Findings of this severity level trigger a CRITICAL',
             choices=severities.keys(), default='CRITICAL')
     parser.add_argument('--warning', help='Findings of this severity level trigger a WARNING', 
             choices=severities.keys(), default='HIGH')
+    parser.add_argument('args', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     if severities[args.critical] < severities[args.warning]:
@@ -45,21 +45,29 @@ try:
     critical = args.critical
     warning = args.warning
 
+
     # start with clean slate
     ok_msg = []
     warn_msg = []
     crit_msg = []
 
-    # Run command
+    # Create temp file
     fd, temp_path = tempfile.mkstemp()
-    proc = subprocess.run([
+
+    # Set command and arguments
+    subproc_args = [
         testssl,
-        '--fast',
-        '-4',
         '--jsonfile-pretty',
         temp_path,
         uri
-        ], stdout=subprocess.PIPE)
+        ]
+
+    # Inject this script's extra command line arguments before the 'uri' part of the testssl.sh command
+    for extra in args.args:
+        subproc_args.insert(3, extra)
+
+    # Run it
+    proc = subprocess.run(subproc_args, stdout=subprocess.PIPE)
     # pprint(proc.returncode)
     # pprint(proc)
 
@@ -84,21 +92,24 @@ try:
         _results = sorted([f for f in r if f['severity_int'] >= severity_int], key = lambda i: i['severity_int'], reverse=True)
         return list(map(lambda x: x['severity'] +  ": " + x['id'] + " (" + x['finding'] + ")", _results))
 
-
+    # FIXME loop over these?
     if get_severity_count_aggregated(severities[critical]) > 0:
-        crit_msg.append("{0} issues found with severity {1} or higher: {2}".format(
+        crit_msg.append("{0} issues found for {1} with severity {2} or higher: {3}".format(
             get_severity_count_aggregated(severities[critical]),
+            uri,
             critical,
             ', '.join(get_severity_items_aggregated(severities[critical])),
 
             ))
     if get_severity_count_aggregated(severities[warning]) > 0:
-        warn_msg.append("{0} issues found with severity {1} or higher: {2}".format(
+        warn_msg.append("{0} issues found for {1} with severity {2} or higher: {3}".format(
             get_severity_count_aggregated(severities[warning]),
+            uri,
             warning,
             ', '.join(get_severity_items_aggregated(severities[warning])),
             ))
     else:
+        # FIXME display number of lower severity issues? To show that things did run.
         ok_msg.append("No issues found with severity {0} or higher".format(warning))
 except Exception as e:
     nagios_exit("UNKNOWN: Unknown error: {0}.".format(e), 3)
