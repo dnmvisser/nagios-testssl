@@ -47,7 +47,8 @@ optional arguments:
 Checking a URI with default severity levels:
 
 ```bash
-vagrant@buster:~$ ./nagios-testssl/nagios-testssl.py --testssl /opt/testssl/testssl.sh --uri https://www.geant.org
+vagrant@buster:~$ ./nagios-testssl/nagios-testssl.py --testssl /opt/testssl/testssl.sh \
+  --uri https://www.geant.org
 WARNING: 2 issues found for https://www.geant.org with severity HIGH or higher.
 HIGH: secure_client_renego (VULNERABLE, DoS threat)
 HIGH: BREACH (potentially VULNERABLE, uses gzip HTTP compression  - only supplied '/' tested)
