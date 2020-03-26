@@ -48,10 +48,6 @@ try:
     # pprint(args)
 
     # start with clean slate
-    ok_msg = []
-    warn_msg = []
-    crit_msg = []
-
     msg = {
             'ok': [],
             'warning': [],
@@ -64,6 +60,7 @@ try:
     # Set command and arguments
     subproc_args = [
         testssl,
+        # '--fast',
         '--jsonfile-pretty',
         temp_path,
         uri
@@ -71,8 +68,8 @@ try:
 
     # Inject this script's trailing command line arguments before the 'uri' part of
     # the testssl.sh command.
-    for extra in trailing_args:
-        subproc_args.insert(3, extra)
+    # for extra in trailing_args:
+    #     subproc_args.insert(3, extra)
 
     # Run it
     proc = subprocess.run(subproc_args, stdout=subprocess.PIPE)
@@ -80,6 +77,7 @@ try:
     with open(temp_path) as f:
         json = json.load(f)
     os.close(fd)
+    # pprint(temp_path)
     os.remove(temp_path)
 
     r = jmespath.search('scanResult[].[*][*]|[0][0][][]|[?severity]', json)
@@ -96,15 +94,17 @@ try:
         return list(map(lambda x: x['severity'] +  ": " + x['id'] + " (" + x['finding'] + ")", _results))
 
     if get_severity_count_aggregated(severities[critical]) > 0:
-        msg['critical'].append("{0} issues found for {1} with severity {2} or higher.\n{3}".format(
+        msg['critical'].append("{0} issue{1} found for {2} with severity {3} or higher.\n{4}".format(
             get_severity_count_aggregated(severities[critical]),
+            's' if get_severity_count_aggregated(severities[critical]) > 1 else '',
             uri,
             critical,
             '\n'.join(get_severity_items_aggregated(severities[critical])),
             ))
     if get_severity_count_aggregated(severities[warning]) > 0:
-        msg['warning'].append("{0} issues found for {1} with severity {2} or higher.\n{3}".format(
+        msg['warning'].append("{0} issue{1} found for {2} with severity {3} or higher.\n{4}".format(
             get_severity_count_aggregated(severities[warning]),
+            's' if get_severity_count_aggregated(severities[warning]) > 1 else '',
             uri,
             warning,
             '\n'.join(get_severity_items_aggregated(severities[warning])),
