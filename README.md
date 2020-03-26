@@ -57,7 +57,8 @@ HIGH: BREACH (potentially VULNERABLE, uses gzip HTTP compression  - only supplie
 Another URI with default severity levels:
 
 ``bash
-vagrant@buster:~$ ./nagios-testssl.py --testssl /opt/testssl/testssl.sh --uri https://login.geant.org
+vagrant@buster:~$ ./nagios-testssl.py --testssl /opt/testssl/testssl.sh \
+  --uri https://login.geant.org
 OK: No issues found for https://login.geant.org with severity HIGH or higher.
 ```
 
@@ -66,7 +67,8 @@ The same URI, but we lowered the severity that will trigger alarms. Instead of
 the default HIGH, we now get notified when a MEDIUM issue is detected:
 
 ```bash
-vagrant@buster:~$ nagios-testssl/nagios-testssl.py --testssl /opt/testssl/testssl.sh --uri https://login.geant.org --critical HIGH --warning MEDIUM
+vagrant@buster:~$ nagios-testssl/nagios-testssl.py --testssl /opt/testssl/testssl.sh \
+  --uri https://login.geant.org --critical HIGH --warning MEDIUM
 OK: No issues found for https://login.geant.org with severity MEDIUM or higher.
 ```
 
@@ -74,7 +76,8 @@ OK: No issues found for https://login.geant.org with severity MEDIUM or higher.
 Trigger on _all_ issues. Interesting - but not very useful for monitoring purposes:
 
 ```bash
-vagrant@buster:~$ ./nagios-testssl/nagios-testssl.py --testssl /opt/testssl/testssl.sh --uri https://www.google.com --critical OK --warning OK
+vagrant@buster:~$ ./nagios-testssl/nagios-testssl.py --testssl /opt/testssl/testssl.sh \
+  --uri https://www.google.com --critical OK --warning OK
 CRITICAL: 176 issues found for https://www.google.com with severity OK or higher.
 HIGH: BREACH (potentially VULNERABLE, uses gzip HTTP compression  - only supplied '/' tested)
 MEDIUM: cipherlist_3DES_IDEA (offered)
