@@ -14,15 +14,10 @@ def nagios_exit(message, code):
     sys.exit(code)
 
 severities = {
-        'DEBUG': 0,
-        'OK': 1,
-        'INFO': 2,
-        'LOW': 3,
-        'MEDIUM': 4,
-        'HIGH': 5,
-        'CRITICAL': 6,
-        'WARN': 7,
-        'FATAL': 8
+        'LOW': 1,
+        'MEDIUM': 2,
+        'HIGH': 3,
+        'CRITICAL': 4,
         }
 try:
     parser = argparse.ArgumentParser(description='Check output of testssl.sh')
@@ -34,7 +29,7 @@ try:
     parser.add_argument('--warning', help='Findings of this severity level trigger a WARNING', 
             choices=severities.keys(), default='HIGH')
     # FIXME this is unreliable
-    parser.add_argument('trailing_args', nargs=argparse.REMAINDER)
+    #parser.add_argument('trailing_args', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     if severities[args.critical] < severities[args.warning]:
@@ -47,7 +42,7 @@ try:
     testssl = args.testssl
     critical = args.critical
     warning = args.warning
-    trailing_args = args.trailing_args
+    # trailing_args = args.trailing_args
     # pprint(args)
 
     # start with clean slate
@@ -69,6 +64,7 @@ try:
         uri
         ]
 
+    # FIXME this is unreliable
     # Inject this script's trailing command line arguments before the 'uri' part of
     # the testssl.sh command.
     # for extra in trailing_args:
@@ -77,6 +73,7 @@ try:
     # Run it
     proc = subprocess.run(subproc_args, stdout=subprocess.PIPE)
 
+    # temp_path = os.path.expanduser('~/work/testssl_results/reset.json')
     with open(temp_path) as f:
         json = json.load(f)
     os.close(fd)
@@ -85,11 +82,12 @@ try:
 
     r = jmespath.search('scanResult[].[*][*]|[0][0][][]|[?severity]', json)
 
+    # Filter out only supported severity levels
+    r = [x for x in r if x['severity'] in severities.keys()]
+
     # Add integer severity level
     for item in r:
         item['severity_int'] = severities[item['severity']]
-
-    # FIXME remove DEBUG, WARN, and FATAL items here.
 
     def get_severity_count_aggregated(severity_int):
         return len([f for f in r if f['severity_int'] >= severity_int])
