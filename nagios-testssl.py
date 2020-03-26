@@ -14,12 +14,10 @@ def nagios_exit(message, code):
     sys.exit(code)
 
 severities = {
-        'OK': 1,
-        'INFO': 2,
-        'LOW': 3,
-        'MEDIUM': 4,
-        'HIGH': 5,
-        'CRITICAL': 6
+        'LOW': 1,
+        'MEDIUM': 2,
+        'HIGH': 3,
+        'CRITICAL': 4,
         }
 try:
     parser = argparse.ArgumentParser(description='Check output of testssl.sh')
@@ -31,7 +29,7 @@ try:
     parser.add_argument('--warning', help='Findings of this severity level trigger a WARNING', 
             choices=severities.keys(), default='HIGH')
     # FIXME this is unreliable
-    parser.add_argument('trailing_args', nargs=argparse.REMAINDER)
+    #parser.add_argument('trailing_args', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     if severities[args.critical] < severities[args.warning]:
@@ -44,14 +42,10 @@ try:
     testssl = args.testssl
     critical = args.critical
     warning = args.warning
-    trailing_args = args.trailing_args
+    # trailing_args = args.trailing_args
     # pprint(args)
 
     # start with clean slate
-    ok_msg = []
-    warn_msg = []
-    crit_msg = []
-
     msg = {
             'ok': [],
             'warning': [],
@@ -64,25 +58,32 @@ try:
     # Set command and arguments
     subproc_args = [
         testssl,
+        # '--fast',
         '--jsonfile-pretty',
         temp_path,
         uri
         ]
 
+    # FIXME this is unreliable
     # Inject this script's trailing command line arguments before the 'uri' part of
     # the testssl.sh command.
-    for extra in trailing_args:
-        subproc_args.insert(3, extra)
+    # for extra in trailing_args:
+    #     subproc_args.insert(3, extra)
 
     # Run it
     proc = subprocess.run(subproc_args, stdout=subprocess.PIPE)
 
+    # temp_path = os.path.expanduser('~/work/testssl_results/reset.json')
     with open(temp_path) as f:
         json = json.load(f)
     os.close(fd)
+    # pprint(temp_path)
     os.remove(temp_path)
 
     r = jmespath.search('scanResult[].[*][*]|[0][0][][]|[?severity]', json)
+
+    # Filter out only supported severity levels
+    r = [x for x in r if x['severity'] in severities.keys()]
 
     # Add integer severity level
     for item in r:
@@ -96,15 +97,17 @@ try:
         return list(map(lambda x: x['severity'] +  ": " + x['id'] + " (" + x['finding'] + ")", _results))
 
     if get_severity_count_aggregated(severities[critical]) > 0:
-        msg['critical'].append("{0} issues found for {1} with severity {2} or higher.\n{3}".format(
+        msg['critical'].append("{0} issue{1} found for {2} with severity {3} or higher.\n{4}".format(
             get_severity_count_aggregated(severities[critical]),
+            's' if get_severity_count_aggregated(severities[critical]) > 1 else '',
             uri,
             critical,
             '\n'.join(get_severity_items_aggregated(severities[critical])),
             ))
     if get_severity_count_aggregated(severities[warning]) > 0:
-        msg['warning'].append("{0} issues found for {1} with severity {2} or higher.\n{3}".format(
+        msg['warning'].append("{0} issue{1} found for {2} with severity {3} or higher.\n{4}".format(
             get_severity_count_aggregated(severities[warning]),
+            's' if get_severity_count_aggregated(severities[warning]) > 1 else '',
             uri,
             warning,
             '\n'.join(get_severity_items_aggregated(severities[warning])),
