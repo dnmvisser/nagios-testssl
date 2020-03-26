@@ -57,7 +57,7 @@ HIGH: BREACH (potentially VULNERABLE, uses gzip HTTP compression  - only supplie
 
 Another URI with default severity levels:
 
-``
+```
 vagrant@buster:~$ ./nagios-testssl.py --testssl /opt/testssl/testssl.sh \
   --uri https://login.geant.org
 OK: No issues found for https://login.geant.org with severity HIGH or higher.
