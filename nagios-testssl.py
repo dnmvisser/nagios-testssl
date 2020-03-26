@@ -14,12 +14,15 @@ def nagios_exit(message, code):
     sys.exit(code)
 
 severities = {
+        'DEBUG': 0,
         'OK': 1,
         'INFO': 2,
         'LOW': 3,
         'MEDIUM': 4,
         'HIGH': 5,
-        'CRITICAL': 6
+        'CRITICAL': 6,
+        'WARN': 7,
+        'FATAL': 8
         }
 try:
     parser = argparse.ArgumentParser(description='Check output of testssl.sh')
@@ -85,6 +88,8 @@ try:
     # Add integer severity level
     for item in r:
         item['severity_int'] = severities[item['severity']]
+
+    # FIXME remove DEBUG, WARN, and FATAL items here.
 
     def get_severity_count_aggregated(severity_int):
         return len([f for f in r if f['severity_int'] >= severity_int])
