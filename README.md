@@ -8,7 +8,7 @@ Nagios/Icinga plugin.
 Obviously you will need a copy of the testssl.sh script. In recent distros this
 is available through the OS package manager. This is a very easy way to install
 it, but the version will stay the same more or less forever. This means you
-will probably end up missing out of recent TLS/crypto issues.
+will probably end up missing out on recent TLS/crypto issues.
 A better approach is cloning the upstream git repository. This way you have the
 latest version, which is also easy to update in the future:
 
