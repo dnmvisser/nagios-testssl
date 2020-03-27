@@ -33,7 +33,7 @@ try:
     args = parser.parse_args()
 
     if severities[args.critical] < severities[args.warning]:
-        parser.error('The severity level to raise a WARNING must be less that the level to raise a CRITICAL')
+        parser.error('The severity level to raise a WARNING can not be higher than the level to raise a CRITICAL')
 
     if urlparse(args.uri).scheme != 'https':
         parser.error('The scheme of the URI must be \'https\'')
@@ -45,6 +45,8 @@ try:
     # trailing_args = args.trailing_args
     # pprint(args)
 
+
+    # Possible nagios statuses
     # start with clean slate
     msg = {
             'ok': [],
