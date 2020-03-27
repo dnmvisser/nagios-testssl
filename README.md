@@ -43,13 +43,19 @@ optional arguments:
 Checking a URI with default severity levels:
 
 ```
-vagrant@buster:~$ ./nagios-testssl/nagios-testssl.py --testssl /opt/testssl/testssl.sh \
+vagrant@buster:~$ ./nagios-testssl.py --testssl /opt/testssl/testssl.sh \
   --uri https://www.geant.org
 WARNING: 2 issues found for https://www.geant.org with severity HIGH or higher.
 HIGH: secure_client_renego (VULNERABLE, DoS threat)
 HIGH: BREACH (potentially VULNERABLE, uses gzip HTTP compression  - only supplied '/' tested)
 ```
 
+The same URI, but skipping specific test IDs:
+```
+vagrant@buster:~$ ./nagios-testssl.py --testssl /opt/testssl/testssl.sh \
+  --uri https://www.geant.org --skip-ids BREACH,secure_client_renego
+OK: No issues found for https://www.geant.org with severity HIGH or higher.
+```
 
 Another URI with default severity levels:
 
@@ -64,7 +70,7 @@ The same URI, but we lowered the severity that will trigger alarms. Instead of
 the default HIGH, we now get notified when a MEDIUM issue is detected:
 
 ```
-vagrant@buster:~$ nagios-testssl/nagios-testssl.py --testssl /opt/testssl/testssl.sh \
+vagrant@buster:~$ ./nagios-testssl.py --testssl /opt/testssl/testssl.sh \
   --uri https://login.geant.org --critical HIGH --warning MEDIUM
 OK: No issues found for https://login.geant.org with severity MEDIUM or higher.
 ```
