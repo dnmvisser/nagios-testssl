@@ -24,7 +24,7 @@ try:
     parser.add_argument('--uri', help='host|host:port|URL|URL:port.'
             'Port 443 is default, URL can only contain HTTPS protocol', required=True)
     parser.add_argument('--testssl', help='Path to the testssl.sh script', required=True)
-    parser.add_argument('--skip-ids', help='Comma separated list of IDs to skip from the result', default='')
+    parser.add_argument('--ignore-ids', help='Comma separated list of test IDs to ignore', default='')
     parser.add_argument('--critical', help='Findings of this severity level trigger a CRITICAL',
             choices=severities.keys(), default='CRITICAL')
     parser.add_argument('--warning', help='Findings of this severity level trigger a WARNING', 
@@ -43,7 +43,7 @@ try:
     testssl = args.testssl
     critical = args.critical
     warning = args.warning
-    skip_ids = args.skip_ids.split(',')
+    ignore_ids = args.ignore_ids.split(',')
     # trailing_args = args.trailing_args
     # pprint(args)
 
@@ -89,8 +89,8 @@ try:
     # Filter out only supported severity levels
     r = [x for x in r if x['severity'] in severities.keys()]
 
-    # Filter out skip_ids
-    r = [x for x in r if x['id'] not in skip_ids]
+    # Filter out ignore_ids
+    r = [x for x in r if x['id'] not in ignore_ids]
 
     # Add integer severity level
     for item in r:
