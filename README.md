@@ -22,6 +22,7 @@ git clone https://github.com/drwetter/testssl.sh.git /opt/testssl
 
 ```
 usage: nagios-testssl.py [-h] --uri URI --testssl TESTSSL
+                         [--ignore-ids IGNORE_IDS]
                          [--critical {LOW,MEDIUM,HIGH,CRITICAL}]
                          [--warning {LOW,MEDIUM,HIGH,CRITICAL}]
 
@@ -32,12 +33,13 @@ optional arguments:
   --uri URI             host|host:port|URL|URL:port.Port 443 is default, URL
                         can only contain HTTPS protocol
   --testssl TESTSSL     Path to the testssl.sh script
+  --ignore-ids IGNORE_IDS
+                        Comma separated list of test IDs to ignore
   --critical {LOW,MEDIUM,HIGH,CRITICAL}
                         Findings of this severity level trigger a CRITICAL
   --warning {LOW,MEDIUM,HIGH,CRITICAL}
                         Findings of this severity level trigger a WARNING
 ```
-
 # Examples
 
 Checking a URI with default severity levels:
@@ -50,10 +52,10 @@ HIGH: secure_client_renego (VULNERABLE, DoS threat)
 HIGH: BREACH (potentially VULNERABLE, uses gzip HTTP compression  - only supplied '/' tested)
 ```
 
-The same URI, but skipping specific test IDs:
+The same URI, but ignoring two tests:
 ```
 vagrant@buster:~$ ./nagios-testssl.py --testssl /opt/testssl/testssl.sh \
-  --uri https://www.geant.org --skip-ids BREACH,secure_client_renego
+  --uri https://www.geant.org --ignore-ids BREACH,secure_client_renego
 OK: No issues found for https://www.geant.org with severity HIGH or higher.
 ```
 
