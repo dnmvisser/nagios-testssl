@@ -25,8 +25,15 @@ usage: nagios-testssl.py [-h] --uri URI --testssl TESTSSL
                          [--ignore-ids IGNORE_IDS]
                          [--critical {LOW,MEDIUM,HIGH,CRITICAL}]
                          [--warning {LOW,MEDIUM,HIGH,CRITICAL}]
+                         ...
 
-Check output of testssl.sh
+Test support of TLS/SSL ciphers, protocols as well as cryptographic flaws and
+much more. This is a wrapper around testssl.sh
+(https://github.com/drwetter/testssl.sh
+
+positional arguments:
+  trailing_args         Provide extra arguments to testssl.sh at the end,
+                        separated by '--'
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -40,6 +47,7 @@ optional arguments:
   --warning {LOW,MEDIUM,HIGH,CRITICAL}
                         Findings of this severity level trigger a WARNING
 ```
+
 # Examples
 
 Checking a URI with default severity levels:
@@ -74,5 +82,15 @@ the default HIGH, we now get notified when a MEDIUM issue is detected:
 ```
 vagrant@buster:~$ ./nagios-testssl.py --testssl /opt/testssl/testssl.sh \
   --uri https://login.geant.org --critical HIGH --warning MEDIUM
+OK: No issues found for https://login.geant.org with severity MEDIUM or higher.
+```
+
+As the previous example, but with extra options for testssl.sh. These need to
+be passed in at the end and separated by `--`:
+
+```
+vagrant@buster:~$ ./nagios-testssl.py --testssl /opt/testssl/testssl.sh \
+  --uri https://login.geant.org --critical HIGH --warning MEDIUM \
+  -- --phone-out --sneaky --full
 OK: No issues found for https://login.geant.org with severity MEDIUM or higher.
 ```
