@@ -20,7 +20,9 @@ severities = {
         'CRITICAL': 4,
         }
 try:
-    parser = argparse.ArgumentParser(description='Check output of testssl.sh')
+    parser = argparse.ArgumentParser(description='Test support of TLS/SSL ciphers, '
+        'protocols as well as cryptographic flaws and much more. This is a wrapper '
+        'around testssl.sh (https://github.com/drwetter/testssl.sh')
     parser.add_argument('--uri', help='host|host:port|URL|URL:port.'
             'Port 443 is default, URL can only contain HTTPS protocol', required=True)
     parser.add_argument('--testssl', help='Path to the testssl.sh script', required=True)
@@ -29,12 +31,13 @@ try:
             choices=severities.keys(), default='CRITICAL')
     parser.add_argument('--warning', help='Findings of this severity level trigger a WARNING', 
             choices=severities.keys(), default='HIGH')
-    # FIXME this is unreliable
-    #parser.add_argument('trailing_args', nargs=argparse.REMAINDER)
+    parser.add_argument('trailing_args', help='Provide extra arguments to testssl.sh at the end, '
+        'separated by \'--\'', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     if severities[args.critical] < severities[args.warning]:
-        parser.error('The severity level to raise a WARNING can not be higher than the level to raise a CRITICAL')
+        parser.error('The severity level to raise a WARNING can not be higher'
+            'than the level to raise a CRITICAL')
 
     if urlparse(args.uri).scheme != 'https':
         parser.error('The scheme of the URI must be \'https\'')
@@ -44,8 +47,7 @@ try:
     critical = args.critical
     warning = args.warning
     ignore_ids = args.ignore_ids.split(',')
-    # trailing_args = args.trailing_args
-    # pprint(args)
+    trailing_args = args.trailing_args
 
 
     # Possible nagios statuses
@@ -62,17 +64,19 @@ try:
     # Set command and arguments
     subproc_args = [
         testssl,
-        # '--fast',
         '--jsonfile-pretty',
         temp_path,
-        uri
         ]
 
-    # FIXME this is unreliable
-    # Inject this script's trailing command line arguments before the 'uri' part of
-    # the testssl.sh command.
-    # for extra in trailing_args:
-    #     subproc_args.insert(3, extra)
+    # Remove '--' separator from the trailing arguments
+    trailing_args.remove('--')
+
+    # Add the trailing arguments
+    subproc_args.extend(trailing_args)
+
+    # Add the URI as the last argument
+    subproc_args.extend([uri])
+
 
     # Run it
     proc = subprocess.run(subproc_args, stdout=subprocess.PIPE)
