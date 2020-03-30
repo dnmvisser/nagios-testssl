@@ -64,12 +64,14 @@ try:
     # Set command and arguments
     subproc_args = [
         testssl,
+        '--append',
         '--jsonfile-pretty',
         temp_path,
         ]
 
     # Remove '--' separator from the trailing arguments
-    trailing_args.remove('--')
+    if '--' in trailing_args:
+        trailing_args.remove('--')
 
     # Add the trailing arguments
     subproc_args.extend(trailing_args)
