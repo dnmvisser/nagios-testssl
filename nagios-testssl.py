@@ -6,8 +6,6 @@ import tempfile
 import subprocess
 import json
 import jmespath
-from pprint import pprint
-from urllib.parse import urlparse
 
 def nagios_exit(message, code):
     print(message)
@@ -23,8 +21,10 @@ try:
     parser = argparse.ArgumentParser(description='Test support of TLS/SSL ciphers, '
         'protocols as well as cryptographic flaws and much more. This is a wrapper '
         'around testssl.sh (https://github.com/drwetter/testssl.sh')
-    parser.add_argument('--uri', help='host|host:port|URL|URL:port.'
-            'Port 443 is default, URL can only contain HTTPS protocol', required=True)
+    uri_or_file = parser.add_mutually_exclusive_group(required=True)
+    uri_or_file.add_argument('--uri', help='host|host:port|URL|URL:port.'
+            'Port 443 is default, URL can only contain HTTPS protocol')
+    uri_or_file.add_argument('--file', help='/path/to/file containing hostnames')
     parser.add_argument('--testssl', help='Path to the testssl.sh script', required=True)
     parser.add_argument('--ignore-ids', help='Comma separated list of test IDs to ignore', default='')
     parser.add_argument('--critical', help='Findings of this severity level trigger a CRITICAL',
@@ -39,10 +39,11 @@ try:
         parser.error('The severity level to raise a WARNING can not be higher'
             'than the level to raise a CRITICAL')
 
-    if urlparse(args.uri).scheme != 'https':
-        parser.error('The scheme of the URI must be \'https\'')
 
-    uri = args.uri
+    if args.file is not None:
+        uri_or_file = args.file
+    else:
+        uri_or_file = args.uri
     testssl = args.testssl
     critical = args.critical
     warning = args.warning
@@ -58,78 +59,80 @@ try:
             'critical': []
             }
 
-    # Create temp file
-    fd, temp_path = tempfile.mkstemp()
+    # Create temp directory; Cleaned up automatically
+    with tempfile.TemporaryDirectory() as temp_path:
+        # Set command and arguments
+        subproc_args = [
+            testssl,
+            '--jsonfile-pretty',
+            temp_path,
+            ]
 
-    # Set command and arguments
-    subproc_args = [
-        testssl,
-        '--append',
-        '--jsonfile-pretty',
-        temp_path,
-        ]
+        # Remove '--' separator from the trailing arguments
+        if '--' in trailing_args:
+            trailing_args.remove('--')
 
-    # Remove '--' separator from the trailing arguments
-    if '--' in trailing_args:
-        trailing_args.remove('--')
+        # Add the trailing arguments
+        subproc_args.extend(trailing_args)
 
-    # Add the trailing arguments
-    subproc_args.extend(trailing_args)
+        # Add an --file flag if a file flag was supplied
+        if args.file is not None:
+            subproc_args.extend(['--file'])
 
-    # Add the URI as the last argument
-    subproc_args.extend([uri])
+        # Add the URI as the last argument
+        subproc_args.extend([uri_or_file])
 
+        # Run it
+        proc = subprocess.run(subproc_args, stdout=subprocess.PIPE)
 
-    # Run it
-    proc = subprocess.run(subproc_args, stdout=subprocess.PIPE)
+        # Iterate over each result file
+        for result_file in os.listdir(temp_path):
+            f = open('{0}/{1}'.format(temp_path, result_file))
+            result_json = json.load(f)
+            uri = result_json['scanResult'][0]['targetHost']
 
-    # temp_path = os.path.expanduser('~/work/testssl_results/reset.json')
-    with open(temp_path) as f:
-        json = json.load(f)
-    os.close(fd)
-    # pprint(temp_path)
-    os.remove(temp_path)
+            r = jmespath.search('scanResult[].[*][*]|[0][0][][]|[?severity]', result_json)
 
-    r = jmespath.search('scanResult[].[*][*]|[0][0][][]|[?severity]', json)
+            # Filter out only supported severity levels
+            r = [x for x in r if x['severity'] in severities.keys()]
 
-    # Filter out only supported severity levels
-    r = [x for x in r if x['severity'] in severities.keys()]
+            # Filter out ignore_ids
+            r = [x for x in r if x['id'] not in ignore_ids]
 
-    # Filter out ignore_ids
-    r = [x for x in r if x['id'] not in ignore_ids]
+            # Add integer severity level
+            for item in r:
+                item['severity_int'] = severities[item['severity']]
 
-    # Add integer severity level
-    for item in r:
-        item['severity_int'] = severities[item['severity']]
+            def get_severity_count_aggregated(severity_int):
+                return len([f for f in r if f['severity_int'] >= severity_int])
 
-    def get_severity_count_aggregated(severity_int):
-        return len([f for f in r if f['severity_int'] >= severity_int])
+            def get_severity_items_aggregated(severity_int):
+                _results = sorted([f for f in r if f['severity_int'] >= severity_int], key = lambda i: i['severity_int'], reverse=True)
+                return list(map(lambda x: x['severity'] +  ": " + x['id'] + " (" + x['finding'] + ")", _results))
 
-    def get_severity_items_aggregated(severity_int):
-        _results = sorted([f for f in r if f['severity_int'] >= severity_int], key = lambda i: i['severity_int'], reverse=True)
-        return list(map(lambda x: x['severity'] +  ": " + x['id'] + " (" + x['finding'] + ")", _results))
+            if get_severity_count_aggregated(severities[critical]) > 0:
+                msg['critical'].append("{0} issue{1} found for {2} with severity {3} or higher.\n{4}".format(
+                    get_severity_count_aggregated(severities[critical]),
+                    's' if get_severity_count_aggregated(severities[critical]) > 1 else '',
+                    uri,
+                    critical,
+                    '\n'.join(get_severity_items_aggregated(severities[critical])),
+                    ))
+            if get_severity_count_aggregated(severities[warning]) > 0:
+                msg['warning'].append("{0} issue{1} found for {2} with severity {3} or higher.\n{4}".format(
+                    get_severity_count_aggregated(severities[warning]),
+                    's' if get_severity_count_aggregated(severities[warning]) > 1 else '',
+                    uri,
+                    warning,
+                    '\n'.join(get_severity_items_aggregated(severities[warning])),
+                    ))
+            else:
+                msg['ok'].append("No issues found for {0} with severity {1} or higher.".format(
+                    uri,
+                    warning,
+                    ))
 
-    if get_severity_count_aggregated(severities[critical]) > 0:
-        msg['critical'].append("{0} issue{1} found for {2} with severity {3} or higher.\n{4}".format(
-            get_severity_count_aggregated(severities[critical]),
-            's' if get_severity_count_aggregated(severities[critical]) > 1 else '',
-            uri,
-            critical,
-            '\n'.join(get_severity_items_aggregated(severities[critical])),
-            ))
-    if get_severity_count_aggregated(severities[warning]) > 0:
-        msg['warning'].append("{0} issue{1} found for {2} with severity {3} or higher.\n{4}".format(
-            get_severity_count_aggregated(severities[warning]),
-            's' if get_severity_count_aggregated(severities[warning]) > 1 else '',
-            uri,
-            warning,
-            '\n'.join(get_severity_items_aggregated(severities[warning])),
-            ))
-    else:
-        msg['ok'].append("No issues found for {0} with severity {1} or higher.".format(
-            uri,
-            warning,
-            ))
+            f.close()
 
 except Exception as e:
     nagios_exit("UNKNOWN: Unknown error: {0}.".format(e), 3)
